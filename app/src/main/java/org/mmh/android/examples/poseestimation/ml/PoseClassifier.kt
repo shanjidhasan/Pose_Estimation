@@ -1,9 +1,7 @@
 package org.mmh.android.examples.poseestimation.ml
 
-import android.content.Context
-import org.tensorflow.lite.Interpreter
 import org.mmh.android.examples.poseestimation.data.Person
-import org.tensorflow.lite.support.common.FileUtil
+import org.tensorflow.lite.Interpreter
 
 class PoseClassifier(
     private val interpreter: Interpreter,
@@ -12,25 +10,6 @@ class PoseClassifier(
     private val input = interpreter.getInputTensor(0).shape()
     private val output = interpreter.getOutputTensor(0).shape()
 
-    companion object {
-        private const val MODEL_FILENAME = "classifier.tflite"
-        private const val LABELS_FILENAME = "labels.txt"
-        private const val CPU_NUM_THREADS = 4
-
-        fun create(context: Context): PoseClassifier {
-            val options = Interpreter.Options().apply {
-                setNumThreads(CPU_NUM_THREADS)
-            }
-            return PoseClassifier(
-                Interpreter(
-                    FileUtil.loadMappedFile(
-                        context, MODEL_FILENAME
-                    ), options
-                ),
-                FileUtil.loadLabels(context, LABELS_FILENAME)
-            )
-        }
-    }
 
     fun classify(person: Person?): List<Pair<String, Float>> {
         // Preprocess the pose estimation result to a flat array

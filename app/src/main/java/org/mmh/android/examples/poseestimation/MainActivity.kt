@@ -24,7 +24,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.mmh.android.examples.poseestimation.camera.CameraSource
 import org.mmh.android.examples.poseestimation.data.Device
-import org.mmh.android.examples.poseestimation.ml.ModelType
 import org.mmh.android.examples.poseestimation.ml.MoveNet
 
 class MainActivity : AppCompatActivity() {
@@ -53,7 +52,6 @@ class MainActivity : AppCompatActivity() {
     private var device = Device.CPU
 
     private var cameraSource: CameraSource? = null
-    private var isClassifyPose = false
     private val requestPermissionLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -193,8 +191,7 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun createPoseEstimator() {
-        modelPos = 1
-        val poseDetector = MoveNet.create(this, device, ModelType.Thunder)
+        val poseDetector = MoveNet.create(this, device)
         poseDetector?.let { detector ->
             cameraSource?.setDetector(detector)
         }

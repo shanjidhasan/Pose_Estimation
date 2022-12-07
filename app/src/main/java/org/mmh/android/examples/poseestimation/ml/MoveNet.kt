@@ -17,10 +17,6 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-enum class ModelType {
-    Lightning,
-    Thunder
-}
 
 class MoveNet(private val interpreter: Interpreter, private var gpuDelegate: GpuDelegate?) :
     PoseDetector {
@@ -34,12 +30,10 @@ class MoveNet(private val interpreter: Interpreter, private var gpuDelegate: Gpu
         private const val TORSO_EXPANSION_RATIO = 1.9f
         private const val BODY_EXPANSION_RATIO = 1.2f
 
-        // TFLite file names.
-        private const val LIGHTNING_FILENAME = "movenet_lightning.tflite"
         private const val THUNDER_FILENAME = "movenet_thunder.tflite"
 
         // allow specifying model type.
-        fun create(context: Context, device: Device, modelType: ModelType): MoveNet {
+        fun create(context: Context, device: Device): MoveNet {
             val options = Interpreter.Options()
             var gpuDelegate: GpuDelegate? = null
             options.setNumThreads(CPU_NUM_THREADS)
@@ -56,17 +50,12 @@ class MoveNet(private val interpreter: Interpreter, private var gpuDelegate: Gpu
                 Interpreter(
                     FileUtil.loadMappedFile(
                         context,
-                        if (modelType == ModelType.Lightning) LIGHTNING_FILENAME
-                        else THUNDER_FILENAME
+                        THUNDER_FILENAME
                     ), options
                 ),
                 gpuDelegate
             )
         }
-
-        // default to lightning.
-        fun create(context: Context, device: Device): MoveNet =
-            create(context, device, ModelType.Lightning)
     }
 
     private var cropRegion: RectF? = null

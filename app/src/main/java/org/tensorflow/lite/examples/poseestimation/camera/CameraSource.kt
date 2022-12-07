@@ -74,7 +74,7 @@ class CameraSource(
     private var imageReaderHandler: Handler? = null
     private var cameraId: String = ""
 
-    suspend fun initCamera(width: Int, height: Int) {
+    suspend fun initCamera(width: Int, height: Int, front_facing: Boolean) {
         camera = openCamera(cameraManager, cameraId)
         PREVIEW_HEIGHT = width
         PREVIEW_WIDTH = height
@@ -94,7 +94,11 @@ class CameraSource(
                 yuvConverter.yuvToRgb(image, imageBitmap)
                 // Create rotated version for portrait display
                 val rotateMatrix = Matrix()
-                rotateMatrix.postRotate(90.0f)
+                if (front_facing){
+                    rotateMatrix.postRotate(270.0f)
+                } else {
+                    rotateMatrix.postRotate(90.0f)
+                }
 
                 val rotatedBitmap = Bitmap.createBitmap(
                     imageBitmap, 0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT,
@@ -146,17 +150,27 @@ class CameraSource(
             }, imageReaderHandler)
         }
 
-    fun prepareCamera() {
+    fun prepareCamera(front_facing: Boolean) {
         for (cameraId in cameraManager.cameraIdList) {
             val characteristics = cameraManager.getCameraCharacteristics(cameraId)
 
-            // We don't use a front facing camera in this sample.
-            val cameraDirection = characteristics.get(CameraCharacteristics.LENS_FACING)
-            if (cameraDirection != null &&
-                cameraDirection == CameraCharacteristics.LENS_FACING_FRONT
-            ) {
-                continue
+            if(front_facing){
+
+                val cameraDirection = characteristics.get(CameraCharacteristics.LENS_FACING)
+                if (cameraDirection != null &&
+                    cameraDirection == CameraCharacteristics.LENS_FACING_BACK
+                ) {
+                    continue
+                }
+            } else {
+                val cameraDirection = characteristics.get(CameraCharacteristics.LENS_FACING)
+                if (cameraDirection != null &&
+                    cameraDirection == CameraCharacteristics.LENS_FACING_FRONT
+                ) {
+                    continue
+                }
             }
+
             this.cameraId = cameraId
         }
     }
@@ -224,6 +238,10 @@ class CameraSource(
         }
         Log.v("LOG", "${persons} ======= ${classificationResult}")
         frameProcessedInOneSecondInterval++
+        if (frameProcessedInOneSecondInterval == 1) {
+            // send fps to view
+            listener?.onFPSListener(framesPerSecond)
+        }
 
         // if the model returns only one item, show that item's score.
         if (persons.isNotEmpty()) {

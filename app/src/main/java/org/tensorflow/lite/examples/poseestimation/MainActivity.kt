@@ -1,6 +1,7 @@
 package org.tensorflow.lite.examples.poseestimation
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Context
@@ -32,6 +33,12 @@ class MainActivity : AppCompatActivity() {
 
     /** A [SurfaceView] for camera preview.   */
     private lateinit var surfaceView: SurfaceView
+    private lateinit var fps_textView: TextView
+    private lateinit var rotate_imageView: ImageView
+
+    private var width = 640
+    private var height = 480
+    private var front_facing = false
 
     /** Default pose estimation model is 1 (MoveNet Thunder)
      * 0 == MoveNet Lightning model
@@ -53,7 +60,7 @@ class MainActivity : AppCompatActivity() {
             if (isGranted) {
                 // Permission is granted. Continue the action or workflow in your
                 // app.
-                openCamera()
+                openCamera(front_facing)
             } else {
                 // Explain to the user that the feature is unavailable because the
                 // features requires a permission that the user has denied. At the
@@ -66,17 +73,23 @@ class MainActivity : AppCompatActivity() {
         }
 
 
-    private var width = 640
-    private var height = 480
+
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        // turn off statusbar
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_main)
+        if (intent != null){
+            front_facing = intent.getStringExtra("front_facing").toBoolean()
+        }
+
         // keep screen on while app is running
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         surfaceView = findViewById(R.id.surfaceView)
+        fps_textView = findViewById(R.id.fps_textView)
+        rotate_imageView = findViewById(R.id.rotate_imageView)
         val screenDimensions = getScreenSizeInlcudingTopBottomBar(this)
 
         width = screenDimensions[0]
@@ -85,7 +98,13 @@ class MainActivity : AppCompatActivity() {
         if (!isCameraPermissionGranted()) {
             requestPermission()
         }
+        rotate_imageView.setOnClickListener(){
+            front_facing = front_facing == false
+            intent.putExtra("front_facing", front_facing.toString())
+            recreate()
+        }
     }
+
 
     ///  Get Screen width & height including top & bottom navigation bar
     fun getScreenSizeInlcudingTopBottomBar(context: Context): IntArray {
@@ -117,7 +136,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        openCamera()
+        openCamera(front_facing)
     }
 
     override fun onResume() {
@@ -141,12 +160,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     // open camera
-    private fun openCamera() {
+    private fun openCamera(front_facing: Boolean) {
         if (isCameraPermissionGranted()) {
             if (cameraSource == null) {
                 cameraSource =
                     CameraSource(surfaceView, object : CameraSource.CameraSourceListener {
                         override fun onFPSListener(fps: Int) {
+                            this@MainActivity.runOnUiThread(java.lang.Runnable {
+                                fps_textView.text = "fps: $fps"
+                            })
                         }
 
                         override fun onDetectedInfo(
@@ -158,10 +180,10 @@ class MainActivity : AppCompatActivity() {
                         }
 
                     }).apply {
-                        prepareCamera()
+                        prepareCamera(front_facing)
                     }
                 lifecycleScope.launch(Dispatchers.Main) {
-                    cameraSource?.initCamera(width, height)
+                    cameraSource?.initCamera(width, height, front_facing)
                 }
             }
             createPoseEstimator()
@@ -184,7 +206,7 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.CAMERA
             ) -> {
                 // You can use the API that requires the permission.
-                openCamera()
+                openCamera(front_facing)
             }
             else -> {
                 // You can directly ask for the permission.

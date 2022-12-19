@@ -32,8 +32,8 @@ class CameraSource(
 ) {
 
     companion object {
-        private var PREVIEW_WIDTH = 1920
-        private var PREVIEW_HEIGHT = 1080
+        private var PREVIEW_WIDTH = 640
+        private var PREVIEW_HEIGHT = 640
 
         /** Threshold for confidence score. */
         private const val MIN_CONFIDENCE = .2f
@@ -79,7 +79,7 @@ class CameraSource(
         PREVIEW_HEIGHT = width
         PREVIEW_WIDTH = height
         imageReader =
-            ImageReader.newInstance(PREVIEW_WIDTH, PREVIEW_HEIGHT, ImageFormat.YUV_420_888, 3)
+            ImageReader.newInstance(PREVIEW_WIDTH, PREVIEW_HEIGHT, ImageFormat.YUV_420_888, 10)
         imageReader?.setOnImageAvailableListener({ reader ->
             val image = reader.acquireLatestImage()
             if (image != null) {
@@ -101,10 +101,10 @@ class CameraSource(
                 }
 
                 val rotatedBitmap = Bitmap.createBitmap(
-                    imageBitmap, 0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT,
+                    imageBitmap, 0, 0, (PREVIEW_WIDTH/2).toInt(), (PREVIEW_HEIGHT/2).toInt(),
                     rotateMatrix, false
                 )
-                processImage(rotatedBitmap)
+                processImage(rotatedBitmap, width, height)
                 image.close()
             }
         }, imageReaderHandler)
@@ -220,7 +220,7 @@ class CameraSource(
     }
 
     // process image
-    private fun processImage(bitmap: Bitmap) {
+    private fun processImage(bitmap: Bitmap, width: Int, height: Int) {
         val persons = mutableListOf<Person>()
         var classificationResult: List<Pair<String, Float>>? = null
 
@@ -247,14 +247,17 @@ class CameraSource(
         if (persons.isNotEmpty()) {
             listener?.onDetectedInfo(persons[0].score, classificationResult)
         }
-        visualize(persons, bitmap)
+        visualize(persons, bitmap, width, height)
     }
 
-    private fun visualize(persons: List<Person>, bitmap: Bitmap) {
+    private fun visualize(persons: List<Person>, bitmap: Bitmap, width: Int, height: Int) {
 
-        val outputBitmap = VisualizationUtils.drawBodyKeypoints(
+        var outputBitmap = VisualizationUtils.drawBodyKeypoints(
             bitmap,
             persons.filter { it.score > MIN_CONFIDENCE }, isTrackerEnabled
+        )
+        outputBitmap = Bitmap.createScaledBitmap(
+            outputBitmap, width, height, false
         )
 
         val holder = surfaceView.holder
